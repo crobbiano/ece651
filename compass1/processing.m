@@ -2,15 +2,31 @@
 clear all
 clc
 %% Read in images
-cd('images\original')
-mats = dir('*.mat');
+cd('images\noise\truth')
+mats = dir('*.png');
 for i=1:length(mats)
-    im(i) = load(mats(i).name);
-    filename = sprintf('Image%d.png',i)
-    imwrite(im(i).Image ,filename)
+    im{i} = imread(mats(i).name);
+%     filename = sprintf('Image%02d.png',i)
+%     imwrite(im(i).Image ,filename)
 end
-cd('..\..')
+cd('..\..\..')
 
+%%
+windowSize = 45
+meanImage = 0;
+imgCnt = 0;
+noiseImages = [];
+for k=1:10
+    currImage = im{k};
+    for i=400:size(currImage,1)-windowSize
+        for j=1:size(currImage,2)-windowSize
+            meanImage = (meanImage + reshape(double(currImage(i:i+windowSize-1,j: j+ windowSize -1)),2025,1));
+            imgCnt= imgCnt+1;
+            noiseImages(end+1,:) = reshape(double(currImage(i:i+windowSize-1,j: j+ windowSize -1)),2025,1);
+        end
+    end
+end
+meanImage = meanImage / imgCnt;
 %% Setup operations and operate
 
 operations = [1 891 477 30;...
@@ -27,6 +43,8 @@ operations = [1 891 477 30;...
 
 
 buff = ceil(max(operations(:,4))/2);
+meanImage = zeros(2025,1);
+numValidNoise = 0;
 for i=1:length(operations)
     currIm = im(operations(i,1)).Image;
     row = operations(i,2);
@@ -48,11 +66,15 @@ for i=1:length(operations)
     noiseIms{(i-1)*8 + 7} = currIm(row + buff+1:row + 3*buff-1,column - 3*buff+1: column - buff-1);
     noiseIms{(i-1)*8 + 8} = currIm(row + buff+1:row + 3*buff-1,column + buff+1: column + 3*buff-1);
 %     figure(54);clf
-    meanImage = zeros(45,45);
     for k=1:8
 %         subplot(4,2,k);
 %         imshow(noiseIms{(i-1)*8 + k})
-        meanImage = (meanImage + double(noiseIms{(i-1)*8 + k}));
+        someval = sum(sum(double(noiseIms{(i-1)*8 + k})))
+        if (someval > 20000)
+            numValidNoise = numValidNoise + 1;
+            meanImage = (meanImage + reshape(double(noiseIms{(i-1)*8 + k}),2025,1));
+%             meanImage = (meanImage + reshape(noiseIms{(i-1)*8 + k},2025,1));
+        end
 %         filename = sprintf('images/noise/noise%d.mat',(i-1)*8 + k);
 %         currNoise = noiseIms{(i-1)*8 + k};
 %         save(filename, 'currNoise');
@@ -62,16 +84,15 @@ for i=1:length(operations)
     end
     
 end
-meanImage = meanImage/length(noiseIms)
+meanImage = meanImage/numValidNoise;
 %% Calculate sample mean and sample covariance of NxN window
 windowSize = max(operations(:,4));
-sampleCov = zeros(windowSize,windowSize);
-sampleMean = 0;
+noiseImages = [];
 for i=1:length(noiseIms)
-    
-    sampleCov = (sampleCov + cov(double(noiseIms{i})));
-    sampleMean = (sampleMean + mean(reshape(double(noiseIms{i}),[],1)));
+    someval = sum(sum(double(noiseIms{i})));
+    if (someval > 20000)
+        noiseImages(end+1,:) = reshape(double(noiseIms{i}),2025,1);
+    end
 end
-sampleCov = sampleCov/length(noiseIms);
-sampleMean = sampleMean/length(noiseIms);
-save('images\noise\stats.mat','sampleCov','sampleMean','windowSize','meanImage')
+sampleCov = cov(noiseImages);
+save('images\noise\stats.mat','sampleCov','windowSize','meanImage')
