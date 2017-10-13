@@ -20,55 +20,50 @@ for i=1:length(ts)
 end
 cd('..\..')
 %% make signals 
-sig=zeros(2025,12);
-sig(:,1) = meanImage;
+sig=zeros(12,2025);
+sig(1,:) = noiseImages(1,:)-mu;
 figure(2);clf;
 subplot(4,3,1);
-imshow(reshape(sig(:,1),45,45),[])
+imshow(reshape(sig(1,:),45,45),[])
 for i=1:length(tumors)
-    sig(:,i+1) = reshape(double(tumors(i).currTumor),[],1);
-%     sig(:,i+1) = reshape(double(tumors(i).currTumor),[],1)-meanImage;
-    sig(sig<0)=0;
+%     sig(i+1,:) = reshape(double(tumors(i).currTumor),[],1);
+    sig(i+1,:) = reshape(double(tumors(i).currTumor),[],1)-mu';
+%     sig(sig<0)=0;
     subplot(4,3,i+1);
-    imshow(reshape(sig(:,i+1),45,45),[])
+    imshow(reshape(sig(i+1,:),45,45),[])
 end
 %% Whighten data by y=Ds, D=C^{1/2}
-[U E] = eig(sampleCov);
-E(E<.00001)=0;
+[U E] = eig(inv(C));
+E(E<0)=0;
 D=U*sqrt(E)*U';
 sigWhite=zeros(2025,12);
 for i=1:12
-    sigWhite(:,i) = D*sig(:,i);
+    sigWhite(:,i) = D*sig(i,:)';
+    subplot(4,3,i);
+    imshow(reshape(sigWhite(:,i),45,45),[])
 end
 
 
 %% Look at just the first image for now and scan windows for tumors
 %  for each window, check the test statistics and determine what hypothesis
 %  should be accepted
-currImage = images{10};
-
-% outs = conv2(double(currImage), reshape(sig(:,2),45,45)/sum(sig(:,2)));
-% figure(83);clf;imshow(reshape(sig(:,2),45,45)/sum(sig(:,2)),[])
-% figure(89);clf;
-% subplot(2,1,1)
-% imshow(outs,[])
-% subplot(2,1,2)
-% matchingRegions = abs(outs - 1) < 0.01;
-% % Use axes() or figure() to switch to a new axes if you want.
-% imshow(matchingRegions, []);
+currImage = images{1};
+% Cheat and test against a signal
+% currImage = reshape(sig(7,:),45,45);
 
 detects = zeros(1,12);
 figure(234);clf;
-for i=400:size(currImage,1)-windowSize
-    for j=1:size(currImage,2)-windowSize
-        window = D*(reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1));
-%         window = D*(reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1)-meanImage);
-%         window = reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),[],1)-meanImage;
+for i=1:2:size(currImage,1)-windowSize+1
+    for j=1:2:size(currImage,2)-windowSize+1
+%         window = D*(reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1));
+        window = D*(reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1)-mu');
+        
+%         window = reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),[],1)-mu;
 %         hist(window,255);
         
         tests = [];
-        for l=1:3
-%             window'*inv(sampleCov)*reshape(sig(:,l),45,45)
+        for l=1:12
+%             window'*inv(C)*reshape(sig(:,l),45,45)
 %             tests(l)=window'*sig(:,l) - .5*sig(:,l)'*sig(:,l);
 %             tests(l)=window'*sig(:,l);
             tests(l)=window'*sigWhite(:,l)- .5*sigWhite(:,l)'*sigWhite(:,l);
@@ -80,14 +75,15 @@ for i=400:size(currImage,1)-windowSize
         detects(idx) = detects(idx) + 1;
         subplot(1,3,1)
 %         imshow(D*double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),[]);
-        imshow(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1)))-reshape(meanImage,45,45),[]);
-        ylabel(['(' num2str(i) ',' num2str(j) ')'])
+        imshow(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1)))-reshape(mu,45,45),[]);
+        xlabel(['(' num2str(i) ',' num2str(j) ')'])
         subplot(1,3,2)
-        imshow(reshape(sig(:,idx),45,45),[]);
-        ylabel(['signal: ' num2str(idx)])
+        imshow(reshape(sigWhite(:,idx),45,45),[]);
+        xlabel(['signal: ' num2str(idx)])
         subplot(1,3,3)
-        imshow(reshape(sig(:,1),45,45),[]);
-        pause(.01)
+        imshow(reshape(window,45,45),[]);
+        xlabel('window')
+%         pause(.01)
     end
     1;
 end
