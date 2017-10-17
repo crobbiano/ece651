@@ -13,6 +13,7 @@ end
 cd('..\..')
 %% Read in sample cov and mean
 load('images\noise\stats.mat')
+muW=mu;
 %% Read in tumors
 cd('images\tumors');
 ts = dir('tumor*.mat');
@@ -22,25 +23,30 @@ end
 cd('..\..')
 %% make signals statistics
 sig=zeros(11,2025);
-signalMean = [];
+% signalMean = [];
 signalCov = [];
 for i=1:length(tumors)
     sig(i,:) = reshape(double(tumors(i).currTumor),[],1);
     subplot(4,3,i);
     imshow(reshape(sig(i,:),45,45),[])
 end
-%% Whighten data by y=Ds, D=C^{1/2}
-[U E] = eig(inv(C));
-E(E<0)=0;
-D=U*sqrt(E)*U';
-sigWhite=zeros(2025,12);
-for i=1:12
-    sigWhite(:,i) = D*sig(i,:)';
+muS = mean(sig);
+signalCov = cov(sig);
+for i=1:length(tumors)
+    sig(i,:) = sig(i,:) - muS;
     subplot(4,3,i);
-%     imshow(reshape(sigWhite(:,i),45,45),[])
+    imshow(reshape(sig(i,:),45,45),[])
 end
-
-
+%% Whighten data by y=Ds, D=C^{1/2}
+% [U E] = eig(inv(C));
+% E(E<0)=0;
+% D=U*sqrt(E)*U';
+% sigWhite=zeros(2025,12);
+% for i=1:12
+%     sigWhite(:,i) = D*sig(i,:)';
+%     subplot(4,3,i);
+% %     imshow(reshape(sigWhite(:,i),45,45),[])
+% end
 %% Look at just the first image for now and scan windows for tumors
 %  for each window, check the test statistics and determine what hypothesis
 %  should be accepted
@@ -55,25 +61,17 @@ if (plotThings)
     figure(234);clf;
 end
 coords=[];
+C1inv = inv(signalCov + C);
+C0inv = inv(C);
+Cest = signalCov*C1inv;
 for i=1:1:size(currImage,1)-windowSize+1
     for j=1:1:size(currImage,2)-windowSize+1
-        window = D*(reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1));
-%         window = D*(reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1)-mu');
+        window = (reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1)-mu');
         
-%         window = reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),[],1)-mu';
-%         hist(window,255);
+        t = window'*C1inv*muS' + .5*window'*C0inv*Cest*window;
         
-        tests = [];
-        for l=1:4
-%             tests(l)=window'*sig(l,:)' - .5*sig(l,:)*sig(l,:)';
-            tests(l)=window'*sigWhite(:,l) - .5*sigWhite(:,l)'*sigWhite(:,l);
-        end
-        [maxim,idx] = max(tests);
-        if (idx ~= 1)
-            coords(end+1,:) = [ (j+windowSize/2) (i+windowSize/2) idx];
-        end
-%         display(['max: ' num2str(idx)])
-        detects(idx) = detects(idx) + 1;
+        % FIXME - Need to figure out the RHS of the t equation to compare t against - look at notes
+        
         if (plotThings)
             subplot(1,3,1)
             %         imshow(D*double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),[]);
