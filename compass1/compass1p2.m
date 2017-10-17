@@ -1,5 +1,5 @@
 %% Save the boobies!
-%  ECE651 computer assignment 1
+%  ECE651 computer assignment 1 part 2
 clear all
 clc
 %% Read in test images
@@ -20,18 +20,14 @@ for i=1:length(ts)
     tumors(i) = load(ts(i).name);
 end
 cd('..\..')
-%% make signals 
-sig=zeros(12,2025);
-sig(1,:) = noiseImages(1,:)-mu;
-figure(2);clf;
-subplot(4,3,1);
-imshow(reshape(sig(1,:),45,45),[])
+%% make signals statistics
+sig=zeros(11,2025);
+signalMean = [];
+signalCov = [];
 for i=1:length(tumors)
-%     sig(i+1,:) = reshape(double(tumors(i).currTumor),[],1);
-    sig(i+1,:) = reshape(double(tumors(i).currTumor),[],1)-mu';
-%     sig(sig<0)=0;
-    subplot(4,3,i+1);
-    imshow(reshape(sig(i+1,:),45,45),[])
+    sig(i,:) = reshape(double(tumors(i).currTumor),[],1);
+    subplot(4,3,i);
+    imshow(reshape(sig(i,:),45,45),[])
 end
 %% Whighten data by y=Ds, D=C^{1/2}
 [U E] = eig(inv(C));
