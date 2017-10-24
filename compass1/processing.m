@@ -1,9 +1,10 @@
 %% Process boob shots
 clear all
 clc
+
 %% Read in images
 cd('images\cropped')
-mats = dir('*.png');
+mats = dir('*.png');0
 for i=1:length(mats)
     im{i} = imread(mats(i).name);
 %     filename = sprintf('Image%02d.png',i)
@@ -21,7 +22,7 @@ for k=1:10
     for i=1:20:size(currImage,1)-windowSize
         for j=1:20:size(currImage,2)-windowSize
             imgCnt= imgCnt+1;
-            noiseImages(end+1,:) = reshape(double(currImage(i:i+windowSize-1,j: j+ windowSize -1)),2025,1);
+            noiseImages(end+1,:) = reshape(double(currImage(i:i+windowSize-1,j: j+ windowSize -1)),windowSize*windowSize,1);
         end
     end
 end
@@ -53,7 +54,7 @@ if (makeNoise ==1 )
     
     
     buff = ceil(max(operations(:,4))/2);
-    mu = zeros(2025,1);
+    mu = zeros(windowSize*windowSize,1);
     numValidNoise = 0;
     for i=1:length(operations)
         currIm = im(operations(i,1)).Image;
@@ -82,8 +83,8 @@ if (makeNoise ==1 )
             someval = sum(sum(double(noiseIms{(i-1)*8 + k})))
             if (someval > 20000)
                 numValidNoise = numValidNoise + 1;
-                mu = (mu + reshape(double(noiseIms{(i-1)*8 + k}),2025,1));
-                %             meanImage = (meanImage + reshape(noiseIms{(i-1)*8 + k},2025,1));
+                mu = (mu + reshape(double(noiseIms{(i-1)*8 + k}),windowSize*windowSize,1));
+                %             meanImage = (meanImage + reshape(noiseIms{(i-1)*8 + k},windowSize*windowSize,1));
             end
             %         filename = sprintf('images/noise/noise%d.mat',(i-1)*8 + k);
             %         currNoise = noiseIms{(i-1)*8 + k};

@@ -38,10 +38,10 @@ for i=1:length(tumors)
     imshow(reshape(sig(i,:),45,45),[])
 end
 %% Whighten data by y=Ds, D=C^{1/2}
-% [U E] = eig(inv(C));
-% E(E<0)=0;
-% D=U*sqrt(E)*U';
-% sigWhite=zeros(2025,12);
+[U E] = eig(inv(C));
+E(E<0)=0;
+D=U*sqrt(E)*U';
+sigWhite=zeros(2025,12);
 % for i=1:12
 %     sigWhite(:,i) = D*sig(i,:)';
 %     subplot(4,3,i);
@@ -51,7 +51,7 @@ end
 %  for each window, check the test statistics and determine what hypothesis
 %  should be accepted
 % currImage = images(1).Image;
-currImage = images{6};
+
 % Cheat and test against a signal
 % currImage = reshape(sig(6,:),45,45);
 
@@ -64,28 +64,46 @@ coords=[];
 C1inv = inv(signalCov + C);
 C0inv = inv(C);
 Cest = signalCov*C1inv;
-for i=1:1:size(currImage,1)-windowSize+1
-    for j=1:1:size(currImage,2)-windowSize+1
-        window = (reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1)-mu');
-        
-        t = window'*C1inv*muS' + .5*window'*C0inv*Cest*window;
-        
-        % FIXME - Need to figure out the RHS of the t equation to compare t against - look at notes
-        
-        if (plotThings)
-            subplot(1,3,1)
-            %         imshow(D*double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),[]);
-            imshow(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1)))-reshape(mu,45,45),[]);
-            xlabel(['(' num2str(j+windowSize/2) ',' num2str(i+windowSize/2) ')'])
-            subplot(1,3,2)
-            imshow(reshape(sigWhite(:,idx),45,45),[]);
-            xlabel(['signal: ' num2str(idx)])
-            subplot(1,3,3)
-            imshow(reshape(window,45,45),[]);
-            xlabel('window')
-            pause(.0001)
+
+for picIdx=1:length(images)
+    tic
+    currImage = images{picIdx};
+%     currImage = images{7};
+    testVals = zeros(size(currImage,1)-windowSize+1,size(currImage,2)-windowSize+1);
+    display(['Image: ' num2str(picIdx)])
+    iIdx=0;jIdx=0;
+    for i=1:1:size(currImage,1)-windowSize+1
+        iIdx = iIdx+1;jIdx=0;
+        if (mod(i,21)==0)
+            display(['i: ' num2str(i)])
+        end
+        for j=1:1:size(currImage,2)-windowSize+1
+            jIdx=jIdx+1;
+            window = (reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1)-mu');
+            
+            t = window'*C1inv*muS' + .5*window'*C0inv*Cest*window;
+            testVals(iIdx,jIdx)=t;
+            
+            % FIXME - Need to figure out the RHS of the t equation to compare t against - look at notes
+            
+            %             if (plotThings)
+            %                 subplot(1,3,1)
+            %                 %         imshow(D*double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),[]);
+            %                 imshow(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1)))-reshape(mu,45,45),[]);
+            %                 xlabel(['(' num2str(j+windowSize/2) ',' num2str(i+windowSize/2) ')'])
+            %                 subplot(1,3,2)
+            %                 imshow(reshape(sigWhite(:,idx),45,45),[]);
+            %                 xlabel(['signal: ' num2str(idx)])
+            %                 subplot(1,3,3)
+            %                 imshow(reshape(window,45,45),[]);
+            %                 xlabel('window')
+            %                 pause(.0001)
+            %             end
+            
         end
     end
-    1;
+     toc
+    filename = sprintf('images/results/result%02d.mat',picIdx)
+%     imwrite(testVals ,filename) 
+    save(filename, 'testVals');
 end
-detects
