@@ -22,7 +22,8 @@ end
 cd('..\..')
 %% Build the statistics for noise and signal based on independent sub strips
 windowSize = 40;
-stripSize = fix(windowSize/2);
+stripSize = 30; % Bigger seems to work better so far
+% stripSize = fix(windowSize/4); % Bigger seems to work better so far
 saveNoise = 0;
 saveSignal = 0;
 
@@ -70,7 +71,7 @@ imgCnt = 0;
 signalImages = [];
 tumorSize = 45;
 
-for k=1:length(tu)-1
+for k=1:length(tu)
     display(['Processing signal image' num2str(k)])
     currImage = tu{k};
 %     figure(4);clf;imshow(currImage,[])
@@ -117,4 +118,4 @@ end
 H = UU(:,1:numPrincipleVectors);
 
 %% Save
-save('images\stats.mat','Cn','windowSize','stripSize','varN','muN','noiseImages','muS','Cs','signalImages','numPrincipleVectors')
+save('images\stats.mat','Cn','windowSize','stripSize','varN','muN','noiseImages','muS','Cs','signalImages','numPrincipleVectors','H','UU','DD','VV')

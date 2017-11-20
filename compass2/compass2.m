@@ -12,7 +12,7 @@ for i=1:length(ts)
 end
 cd('..\..')
 %% Read in sample cov and mean
-load('images_p2\noise\stats2.mat')
+load('images\stats.mat')
 
 %% Look at just the first image for now and scan windows for tumors
 %  for each window, check the test statistics and determine what hypothesis
@@ -37,7 +37,9 @@ detectMap = [];
 Pds = [];
 Pfas = [];
 picNum = 0;
-for picIdx=[2 3 4 5 6 8 9]
+for picIdx=[2 3 4 5 7 9]
+% for picIdx=[2 3 4]
+% for picIdx=[1]
     picNum = picNum +1 ;
     tic
     currImage = images{picIdx};
@@ -58,21 +60,21 @@ for picIdx=[2 3 4 5 6 8 9]
             jIdx=jIdx+1;
             
             %             window = (reshape(double(currImage(i:windowSize+(i-1),j:windowSize+(j-1))),2025,1)-mu');
-            window = currImage(i:windowSize+(i-1),j:windowSize+(j-1));
+            ROI = currImage(i:windowSize+(i-1),j:windowSize+(j-1));
             % Take current window and split it into sub windows and process
             i2Idx=0;j2Idx=0;
-            t=[];
-            for i2=1:subWindowSize:size(window,1)-subWindowSize
+            t=[];            
+            for i2=1:windowSize
                 i2Idx = i2Idx + 1;
                 j2Idx=0;
-                for j2=1:subWindowSize:size(window,2)-subWindowSize
+                for j2=1:stripSize:windowSize-stripSize
                     j2Idx = j2Idx + 1;
-                    tempSub = window(i2:subWindowSize+(i2-1),j2:subWindowSize+(j2-1));
-                    subWindow(:,i2Idx) = reshape(double(tempSub), subWindowSize*subWindowSize,[]);
-                    subWindow(:,i2Idx) = subWindow(:,i2Idx) - muN';
+                    subWindow(:,i2Idx) = ROI(j2:j2+stripSize-1,i2);
+%                     subWindow(:,i2Idx) = subWindow(:,i2Idx) - muN';
                     %                     subWindow(:,i2Idx) = subWindow(:,i2Idx);
                     %                     subWindow(:,i2Idx) = subWindow(:,i2Idx) - muS' - muN';
-                    t(i2Idx,j2Idx) = subWindow(:,i2Idx)'*C1inv*muS' + .5*subWindow(:,i2Idx)'*C0inv*Cest*subWindow(:,i2Idx);
+%                     t(i2Idx,j2Idx) = subWindow(:,i2Idx)'*C1inv*muS' + .5*subWindow(:,i2Idx)'*C0inv*Cest*subWindow(:,i2Idx);
+                    t(i2Idx,j2Idx) = norm(double(subWindow)'*H)^2;
                     %                     t(i2Idx,j2Idx) = .5*subWindow(:,i2Idx)'*C0inv*(Cest*subWindow(:,i2Idx));
                 end
             end
@@ -133,17 +135,18 @@ for picIdx=[2 3 4 5 6 8 9]
         26,163;]
     
     [m,n]= size(detectMap);
-    foldername = sprintf('images_p2/results/image%02d',picIdx);
+    foldername = sprintf('images/results/image%02d',picIdx);
     mkdir(foldername)
-    filename = sprintf('images_p2/results/image%02d/result%02d_orig.png',picIdx,picIdx);
+    filename = sprintf('images/results/image%02d/result%02d_orig.png',picIdx,picIdx);
     imwrite(currImage ,filename)
     
     
     pIdx = 0;
-    for threshInc=0:.05:1
+    for threshInc=0:.01:1
         pIdx = pIdx + 1;
         detections = zeros(m,n);
         thresh =threshInc*max(max(detectMap));
+%         thresh =threshInc*1000000;
         for i=1:m
             for j=1:n
                 if (detectMap(i,j)>thresh)
@@ -178,7 +181,7 @@ for picIdx=[2 3 4 5 6 8 9]
         
         %     filename = sprintf('images_p2/results/result%02d_t%.2f_detMap.png',picIdx,threshInc)
         %     imwrite(detectMap ,filename)
-        filename = sprintf('images_p2/results/image%02d/result%02d_t%.2f_detections.png',picIdx,picIdx,threshInc);
+        filename = sprintf('images/results/image%02d/result%02d_t%.2f_detections.png',picIdx,picIdx,threshInc);
         imwrite(detections ,filename)
         
         figure(2);clf;
@@ -198,10 +201,15 @@ end
 % the mean of each then plot!
 Pdmean = mean(Pds);
 Pfamean = mean(Pfas);
-figure(13);clf;
-plot(Pfamean,Pdmean)
+figure(13);clf; hold on
+plot(Pfamean,Pdmean,'--o')
+% plot(Pfas,Pds)
+for i=1:size(Pfas,1)
+    plot(Pfas(i,:),Pds(i,:))
+end
 xlabel('P_F_A')
 ylabel('P_D')
 xlim([-.05 1.05])
 ylim([-.05 1.05])
+legend('mean','1','2','3','4','5','7','9')
 grid minor
