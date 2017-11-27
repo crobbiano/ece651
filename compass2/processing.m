@@ -21,8 +21,8 @@ for i=1:length(mats)
 end
 cd('..\..')
 %% Build the statistics for noise and signal based on independent sub strips
-windowSize = 40;
-stripSize = 30; % Bigger seems to work better so far
+windowSize = 20;
+stripSize = 10; % Bigger seems to work better so far
 % stripSize = fix(windowSize/4); % Bigger seems to work better so far
 saveNoise = 0;
 saveSignal = 0;
@@ -56,6 +56,7 @@ muN = mean(noiseImages);
 sumNorm2 = 0;
 for i=1:size(noiseImages,1)
     sumNorm2 = sumNorm2 + norm(noiseImages(i,:))^2;
+%     sumNorm2 = sumNorm2 + norm(noiseImages(i,:)-muN)^2;
 end
 varN = sumNorm2/(stripSize*size(noiseImages,1))
 
@@ -70,12 +71,15 @@ muS = 0;
 imgCnt = 0;
 signalImages = [];
 tumorSize = 45;
+maxTumorSize = 45;
 
-for k=1:length(tu)
+% for k=1:length(tu)
+% for k=[2 4 5 6 10]
+for k=[2 4]
     display(['Processing signal image' num2str(k)])
     currImage = tu{k};
 %     figure(4);clf;imshow(currImage,[])
-    currImage = currImage( floor((45-tumorSize)/2) + 1 : floor((45-tumorSize)/2) + tumorSize , floor((45-tumorSize)/2) + 1 :  floor((45-tumorSize)/2) + tumorSize);
+    currImage = currImage( floor((maxTumorSize-tumorSize)/2) + 1 : floor((maxTumorSize-tumorSize)/2) + tumorSize , floor((maxTumorSize-tumorSize)/2) + 1 :  floor((maxTumorSize-tumorSize)/2) + tumorSize);
     % extract columns from ROI of windowSize x windowSize
     for i=1:windowSize:size(currImage,1)-windowSize
         for j=1:windowSize:size(currImage,2)-windowSize
@@ -97,11 +101,11 @@ end
 %% Get signal stats
 muS = mean(signalImages);
 
-Cs = cov(signalImages);
-[Us Es] = eig(inv(Cs));
-Es(Es<0)=0;
-Ds=Us*sqrt(Es)*Us';
-whiteCs = cov(signalImages*Ds);
+% Cs = cov(signalImages);
+% [Us Es] = eig(inv(Cs));
+% Es(Es<0)=0;
+% Ds=Us*sqrt(Es)*Us';
+% whiteCs = cov(signalImages*Ds);
 
 [UU DD VV] = svd(signalImages','econ');
 
@@ -118,4 +122,5 @@ end
 H = UU(:,1:numPrincipleVectors);
 
 %% Save
-save('images\stats.mat','Cn','windowSize','stripSize','varN','muN','noiseImages','muS','Cs','signalImages','numPrincipleVectors','H','UU','DD','VV')
+% save('images\stats.mat','Cn','windowSize','stripSize','varN','muN','noiseImages','muS','Cs','signalImages','numPrincipleVectors','H','UU','DD','VV')
+save('images\stats.mat','windowSize','stripSize','varN','muN','noiseImages','muS','signalImages','numPrincipleVectors','H','UU','DD','VV')
