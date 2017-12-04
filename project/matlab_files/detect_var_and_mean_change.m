@@ -2,42 +2,53 @@
 clear all
 clc
 
-f0 = .02;
-n=1:1500;
+f0 = .1;
+n=1:1000;
 % signal_snr = 20;
-vars = 1;
+vars = .01;
 signal_snr = -10*log10(vars)
 
-true_signal = cos(f0.*n);
-true_signal = gen_ux0(length(n),2);
+% true_signal = cos(f0.*n);
+true_signal = gen_ux0(length(n), 10);
 noisy_true_signal = awgn(true_signal, signal_snr);
 truevar = var(noisy_true_signal-true_signal);
+truevar = vars;
 
-var_offset = .5;
-mod_snr = -10*log10(vars + var_offset)
+var_offset = .1;
+mean_offset = 2;
+mod_snr = -10*log10(truevar + var_offset)
 mod_signal = true_signal;
-mod_signal(1:250) = awgn(true_signal(1:250), signal_snr);
-% mod_signal(40:89) = awgn(true_signal(40:89), signal_snr)+3;
-mod_signal(251:end) = awgn(true_signal(251:end), mod_snr);
+mod_signal(1:99) = awgn(true_signal(1:99), signal_snr);
+mod_signal(100:199) = awgn(true_signal(100:199), mod_snr);
+mod_signal(200:end) = awgn(true_signal(200:end), mod_snr) + linspace(0,mean_offset,length(n) - 200 + 1);
 x = mod_signal;
-modvar = var(true_signal(251:350) - mod_signal(251:350))
-change_points = [251 ];
+modvar = truevar + var_offset
+change_points = [100 200];
 
-beta = [-truevar+.000001:.001:2*truevar]';
+alpha = [-10:.01:10]';
+mean_thresh = 1.3*sqrt(truevar);
+
+beta = [-truevar+.0001:.001:2*truevar]';
 var_thresh = (truevar)/1;
 var_thresh2 = truevar*8;
 
-alarm_window_sz = 20; % size of window to count alarm detections in
+alarm_window_sz = 30; % size of window to count alarm detections in
 alarm_window_sz2 = 20; % size of window to count alarm detections in
 alarm_time = nan;
+alarm_time_m = nan;
 alarm_window_idx = 1;
+alarm_window_idx_m = 1;
 alarms = [];
+alarms_m = [];
+final_time = -1;
 
 found_var = 0;
+found_mu = 0;
 
 %% Testing for deviation form the known mean function
-xlikelihood = nan(length(beta), 1);
-% xlikelihood = nan(length(alpha), length(n));
+% xlikelihood = nan(length(beta), 1);
+xlikelihood = nan( length(beta), 1);
+xlikelihood_m = nan( length(alpha), 1);
 
 
 for t=n % This is the time index
@@ -48,14 +59,45 @@ for t=n % This is the time index
     % alarm_window_sz discrepencies in a row then notify that a change in
     % the distribution has occured
     
-    if (alarm_window_idx >= alarm_window_sz || found_var)
-        display(['Change in variance of the distribution at time t = ' num2str(alarm_time) '; delay time = ' num2str(alarm_time - change_points(1))])
+    if ( found_var || found_mu)
+        display(['Change in the distribution at time t = ' num2str(max([alarm_time alarm_time_m])) '; delay time = ' num2str(final_time)])
         break;
+    end
+     
+    
+        % calculate the likelihood of x(n) with different mean offsets
+    for a=1:length(alpha);
+        xlikelihood_m(a) = (1/sqrt(2*pi*truevar))*exp(-(1/(2*truevar))*(x(t) + alpha(a) - true_signal(t))^2);
+    end
+    
+    % find the mean offset that produced the greatest likelihood
+    [rowmax rowmaxidx] = max(xlikelihood_m);
+    [colmax colmaxidx] = max(max(xlikelihood_m));
+    detected_mu = -alpha(rowmaxidx);
+    
+    % compare the mean offset to the mean threshold
+    if (abs(detected_mu) > mean_thresh )
+        if (t ~= alarm_time_m + alarm_window_idx_m)
+            alarm_window_idx_m = 1;
+            alarm_time_m = t;
+        else
+            alarm_window_idx_m = alarm_window_idx_m + 1;
+        end
+        alarms_m(end+1) = t;
+    end
+    % count the number of alarms in the past alarm_window_sz and flag
+    % if more than the threshold
+    alarm_thresh_m = alarm_window_sz;
+    num_alarms_m = sum(alarms_m > t - alarm_window_sz);
+    if (num_alarms_m >= alarm_thresh_m)
+        final_time = alarm_time_m - change_points(2);
+        found_mu = 1;
+        display(['Found mean'])
     end
     
     % calculate the likelihood of x(n) with different mean offsets
-    for a=1:length(beta);
-        xlikelihood(a,1) = (1/sqrt(2*pi*(truevar + beta(a))))*exp(-(1/(2*(truevar + beta(a))))*(x(t) - true_signal(t))^2);
+    for b=1:length(beta);
+        xlikelihood(b) = (1/sqrt(2*pi*(truevar + beta(b))))*exp(-(1/(2*(truevar + beta(b))))*(x(t) - true_signal(t))^2);
     end
     
     % find the mean offset that produced the greatest likelihood
@@ -79,6 +121,7 @@ for t=n % This is the time index
         num_alarms = sum(alarms > t - alarm_window_sz);
         if (num_alarms >= alarm_thresh)
             found_var = 1;
+            final_time = alarm_time - change_points(1);
             display(['Found thresh'])
         end
     end
@@ -89,9 +132,12 @@ for t=n % This is the time index
         windowvar = var(x(alarm_time-offset:t)-true_signal(alarm_time-offset:t));
         if (windowvar > var_thresh2)
             found_var = 1;
+            final_time = alarm_time - change_points(1);
             display(['Found window'])
         end
     end
+    
+
 end
 
 
@@ -106,8 +152,9 @@ end
 
 %% plot things
 figure(10);clf;hold on
-plot(n,x,'-',n,true_signal,'--', change_points, x(change_points), 'ko', alarms, zeros(length(alarms)),'xr')
+plot(n,x,'-',n,true_signal,'--', change_points, x(change_points), 'ko', alarms, zeros(length(alarms)),'xr',alarms_m, zeros(length(alarms_m)),'ob')
 line([t t],ylim,'Color',[1,0,0])
 for i=1:length(change_points)
     line([change_points(i) change_points(i)],ylim,'Color',[0,0,0],'LineStyle','--')
 end
+xlim([0 t+10])
