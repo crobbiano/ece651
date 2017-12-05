@@ -45,7 +45,7 @@ end
 
 
 % Subplot
-xlimit = max([kk, SRn]);
+xlimit = max([kk, SRn, shew3]);
 
 fig=figure(99);clf;
 set(0, 'defaultTextInterpreter', 'latex');
@@ -53,11 +53,12 @@ set(groot, 'defaultAxesTickLabelInterpreter','latex')
 
 
 % Plot signal with standard deviation lines
-fig4 = subplot(3,1,1); hold on
+fig4 = subplot(4,1,1); hold on
 plot(fig4, n,x,'-',n,true_signal,'--', change_points, x(change_points), 'ko')
-plot(fig4, n,true_signal+sqrt(truevar),'--.k',n,true_signal-sqrt(truevar),'--.k')
+plot(fig4, n,true_signal+sqrt(truevar),'--k',n,true_signal-sqrt(truevar),'--k')
 line([kk kk],ylim,'Color',[1,0,0])
 line([SRn SRn],ylim,'Color',[0,1,0])
+line([shew3 shew3],ylim,'Color',[0,0,1])
 for i=1:length(change_points)
     line([change_points(i) change_points(i)],ylim,'Color',[0,0,0],'LineStyle','--')
 end
@@ -68,7 +69,7 @@ ylabel('Signal Amplitude')
 title(['SNR=' num2str(signal_snr) '; 1st Change (n=100): SNR=' num2str(mod_snr) '; 2nd Change (n=500): DC mean shift= ' num2str(mean_offset)])
 
 % Plot CUSUM statistic
-fig2 = subplot(3,1,3);
+fig2 = subplot(4,1,3);
 plot(fig2, xlen,cc,'black')
 hline=refline(0,h);
 set(hline,'LineStyle',':','Color','black');
@@ -83,7 +84,7 @@ for i=1:length(change_points)
 end
 
 % Plot SR Gauss statistic
-fig3 = subplot(3,1,2);
+fig3 = subplot(4,1,2);
 plot(fig3, xlen,Wn,'black')
 % hline=refline(0,h);
 % set(hline,'LineStyle',':','Color','black');
@@ -92,6 +93,35 @@ xlabel('Samples');
 ylabel('SR Gauss Statistic');
 line([SRn SRn],ylim,'Color',[0,1,0])
 ylim([0, Wn(SRn)+.2*Wn(SRn)])
+xlim([0 xlimit+10])
+for i=1:length(change_points)
+    line([change_points(i) change_points(i)],ylim,'Color',[0,0,0],'LineStyle','--')
+end
+
+% Plot Shewart statistic
+fig5 = subplot(4,1,3);
+plot(fig5, xlen,x,'b',xlen,true_signal+3*sqrt(truevar),'k--')
+% hline=refline(0,h);
+% set(hline,'LineStyle',':','Color','black');
+title('Shewart 3-sigma')
+xlabel('Samples');
+ylabel('Signal Amplitude');
+line([shew3 shew3],ylim,'Color',[0,0,1])
+xlim([0 xlimit+10])
+for i=1:length(change_points)
+    line([change_points(i) change_points(i)],ylim,'Color',[0,0,0],'LineStyle','--')
+end
+
+% Plot CUSUM statistic
+fig2 = subplot(4,1,4);
+plot(fig2, xlen,cc,'black')
+hline=refline(0,h);
+set(hline,'LineStyle',':','Color','black');
+title('CUSUM')
+xlabel('Samples');
+ylabel('CUSUM Statistic');
+line([kk kk],ylim,'Color',[1,0,0])
+ylim([0, 10])
 xlim([0 xlimit+10])
 for i=1:length(change_points)
     line([change_points(i) change_points(i)],ylim,'Color',[0,0,0],'LineStyle','--')

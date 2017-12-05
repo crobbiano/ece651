@@ -9,7 +9,7 @@ d=3;
 
 % Alarm location
 for i=1:size(data,1)
-    if data(i)>a+d*s
+    if data(i)>a(i)+d*s
         step=i;
         return;
     end
