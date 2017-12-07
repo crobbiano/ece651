@@ -1,7 +1,6 @@
-function [p,W]=SRnorm(data,a,s)
+function [p,W]=SRnorm(data,a,s, Wstop)
 % Gaussian SR parameters
 n=1;
-Wstop=700;
 del=1;
 d2=del^2;
 s2=s^2;

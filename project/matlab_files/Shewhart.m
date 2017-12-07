@@ -1,7 +1,7 @@
 function [i]=Shewhart(data,a,s)
 % Turn counts into count rate
 data=data./100;
-a=a/100;
+a=a./100;
 s=s/100;
 
 % Shewhart parameters
