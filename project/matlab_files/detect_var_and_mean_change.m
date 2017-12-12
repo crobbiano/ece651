@@ -5,7 +5,7 @@ clc
 f0 = .1;
 n=1:1000;
 % signal_snr = 20;
-vars = .1;
+vars = .01;
 signal_snr = -10*log10(vars)
 
 % true_signal = cos(f0.*n);
@@ -15,7 +15,7 @@ noisy_true_signal = awgn(true_signal, signal_snr);
 truevar = vars;
 
 var_offset = .0;
-mean_offset = .3;
+mean_offset = .1;
 mod_snr = -10*log10(truevar + var_offset)
 mod_signal = true_signal;
 mod_signal(1:99) = awgn(true_signal(1:99), signal_snr);
@@ -66,22 +66,30 @@ for t=n % This is the time index
         display(['Change in the distribution at time t = ' num2str(max([alarm_time alarm_time_m])) '; delay time = ' num2str(final_time)])
         break;
     end
-     
     
-        % calculate the likelihood of x(n) with different mean offsets
+    %% mean check
+    % calculate the likelihood of x(n) with different mean offsets
     for a=1:length(alpha);
-%         xlikelihood_m(a) = (1/sqrt(2*pi*truevar))*exp(-(1/(2*truevar))*(x(t) + alpha(a) - true_signal(t))^2);
+        %         xlikelihood_m(a) = (1/sqrt(2*pi*truevar))*exp(-(1/(2*truevar))*(x(t) + alpha(a) - true_signal(t))^2);
         xlikelihood_m(a) = (1/sqrt(2*pi*truevar))*exp(-(1/(2*truevar))*(x(t) - alpha(a))^2);
     end
     
     % find the mean offset that produced the greatest likelihood
     [rowmax rowmaxidx] = max(xlikelihood_m);
-    [colmax colmaxidx] = max(max(xlikelihood_m));
-    detected_mu = -alpha(rowmaxidx);
+    detected_mu = alpha(rowmaxidx);
+    
+    delta_mu(t) = true_signal(t) - detected_mu;
+    delta_mu_window_sz = 50;
+    if (t > delta_mu_window_sz)
+        avg_delta_mu(t) = mean(delta_mu(t-delta_mu_window_sz:t));
+    end
+    
+    llr(t,1) = xlikelihood_m(rowmaxidx)/((1/sqrt(2*pi*truevar))*exp(-(1/(2*truevar))*(x(t) - true_signal(t))^2));
     
     % compare the mean offset to the mean threshold
-    if (abs(detected_mu) > mean_thresh )
-%     if (abs(detected_mu) > 1.5*abs(true_signal(t)) )
+    %     if ((detected_mu) > mean_thresh )
+    %     if (abs(detected_mu) > 1.5*abs(true_signal(t)) )
+    if (llr(t,1) >  10)
         if (t ~= alarm_time_m + alarm_window_idx_m)
             alarm_window_idx_m = 1;
             alarm_time_m = t;
@@ -92,17 +100,19 @@ for t=n % This is the time index
     end
     % count the number of alarms in the past alarm_window_sz and flag
     % if more than the threshold
-    alarm_thresh_m = alarm_window_sz/2;
-    num_alarms_m = sum(alarms_m > t - alarm_window_sz);
+    alarm_window_sz_m = 10;
+    alarm_thresh_m = alarm_window_sz_m/2;
+    num_alarms_m = sum(alarms_m > t - alarm_window_sz_m);
     if (num_alarms_m >= alarm_thresh_m)
         final_time = alarm_time_m - change_points(2);
         found_mu = 1;
         display(['Found mean of ' num2str(detected_mu) '; true = ' num2str(true_signal(t))])
     end
     
+    %% variance check
     % calculate the likelihood of x(n) with different mean offsets
     for b=1:length(beta);
-%         xlikelihood(b) = (1/sqrt(2*pi*(truevar + beta(b))))*exp(-(1/(2*(truevar + beta(b))))*(x(t) - true_signal(t))^2);
+        %         xlikelihood(b) = (1/sqrt(2*pi*(truevar + beta(b))))*exp(-(1/(2*(truevar + beta(b))))*(x(t) - true_signal(t))^2);
         xlikelihood(b) = (1/sqrt(2*pi*(beta(b))))*exp(-(1/(2*(beta(b))))*(x(t) - true_signal(t))^2);
     end
     
@@ -143,7 +153,7 @@ for t=n % This is the time index
         end
     end
     
-
+    
 end
 
 
