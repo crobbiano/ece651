@@ -6,16 +6,16 @@ clc
 f0 = 1;
 n=1:1000;
 % signal_snr = 20;
-truevar = .1;
+truevar = .2;
 signal_snr = -10*log10(truevar)
 
 % true_signal = cos(f0.*n);
-true_signal = gen_ux0(length(n), 70)+5;
+true_signal = gen_ux0(length(n), 30)+5;
 % noisy_true_signal = awgn(true_signal, signal_snr);
 % truevar = var(noisy_true_signal-true_signal);
 
 var_offset = .0;
-mean_offset = -3;
+mean_offset = -2;
 mod_snr = -10*log10(truevar + var_offset)
 mod_signal = true_signal;
 mod_signal(1:199) = awgn(true_signal(1:199), signal_snr);
@@ -43,18 +43,21 @@ a=true_signal;
 t=length(n);
 for i=1:t
     if (i<=m)
-        c(i) = 0;
-        cmin(i) = 0;
+        
+        sig_est = (1/i)*sum((data(1:i)-a(1:i)).^2);
+        mu_est = (1/i)*sum(data(1:i)-a(1:i));
+        c(i) = .5*log(s/sig_est) + .5*(1/sig_est - 1/s)*sum((data(1:i)-a(1:i)).^2) + (1/sig_est)*sum(((data(1:i)-a(1:i))*mu_est) - mu_est^2);
     else
         sig_est = (1/m)*sum((data(i-m:i)-a(i-m:i)).^2);
         mu_est = (1/m)*sum(data(i-m:i)-a(i-m:i));
-        c(i) = .5*log(s) - .5 * log(sig_est) + .5*(1/sig_est - 1/s)*sum((data(i-m:i)-a(i-m:i)).^2);
-        cmin(i) = min([0,.5*log(s) - .5 * log(sig_est) + .5*(1/sig_est - 1/s)*sum((data(i-m:i)-a(i-m:i)).^2)]);
+        c(i) = .5*log(s/sig_est) + .5*(1/sig_est - 1/s)*sum((data(i-m:i)-a(i-m:i)).^2) + (1/sig_est)*sum(((data(i-m:i)-a(i-m:i))*mu_est) - mu_est^2);
     end
+%     cmin(i) = min([0,c(i)]);
+    cmin(i) = c(i);
 end
 
-if (sum(cmin<-20)>0)
-    num1 = find(cmin < -20);
+if (sum(cmin<-22)>0)
+    num1 = find(cmin < -22);
     num1 = num1(1);
 else
     num1=length(n)
@@ -170,9 +173,9 @@ end
 
 subplot(5,1,5)
 plot(cmin,'k')
-title('CUSUM adopted for change in mean and variance')
+title('SMAGLR')
 xlabel('Samples');
-ylabel('CUSUM Statistic');
+ylabel('SMAGLR Statistic');
 for i=1:length(change_points)
     line([change_points(i) change_points(i)],ylim,'Color',[0,0,0],'LineStyle','--')
 end

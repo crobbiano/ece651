@@ -52,7 +52,7 @@ if (gen_data)
                     m=100;
                     c = zeros(1,length(n));
                     cmin = zeros(1,length(n));
-                    c_thresh = -20;
+                    c_thresh = -22;
                     
                     for i=1:length(n);
                         if (i<=m)
@@ -61,8 +61,9 @@ if (gen_data)
                         else
                             sig_est = (1/m)*sum((mod_signal(i-m:i)-true_signal(i-m:i)).^2);
                             mu_est = (1/m)*sum(mod_signal(i-m:i)-true_signal(i-m:i));
-                            c(i) = .5*log(truevar) - .5 * log(sig_est) + .5*(1/sig_est - 1/truevar)*sum((mod_signal(i-m:i)-true_signal(i-m:i)).^2);
-                            cmin(i) = min([0,.5*log(truevar) - .5 * log(sig_est) + .5*(1/sig_est - 1/truevar)*sum((mod_signal(i-m:i)-true_signal(i-m:i)).^2)]);
+                            c(i) = .5*log(truevar/sig_est) + .5*(1/sig_est - 1/truevar)*sum((mod_signal(i-m:i)-true_signal(i-m:i)).^2) + ...
+                                (1/sig_est)*sum(((mod_signal(i-m:i)-true_signal(i-m:i))*mu_est) - mu_est^2);
+                            cmin(i) = min([0,c(i)]);
                         end
                     end
                     
@@ -81,8 +82,8 @@ if (gen_data)
     end
 end
 %% save the data
-% save('full_data.mat','data');
-load('full_data.mat')
+% save('test_data.mat','data');
+load('test_data.mat')
 % load('full_set.mat')
 %% process all the data
 % data = (truevar, var_offset, mean_offset, signal_snr, mod_snr, kk, shew3, SRn, num1)
@@ -335,8 +336,8 @@ grid minor; hold on
 plot(-var_data(:,13), var_data(:,12),'--')
 plot(-var_data(:,13), var_data(:,8),'-.')
 title('Pd and Pfa for different changes in SNR')
-xlabel('Change in SNR (dB) - Modified CUSUM')
-legend('P_D','P_F_A')
+xlabel('Change in SNR (dB) - SMAGLR')
+% legend('P_D','P_F_A')
 
 subplot(4,1,2)
 grid minor; hold on
@@ -344,7 +345,7 @@ plot(-var_data(:,13), var_data(:,9),'--')
 plot(-var_data(:,13), var_data(:,5),'-.')
 % title('P_D and P_F_A for different changes in SNR')
 xlabel('Change in SNR (dB) -  CUSUM')
-legend('P_D','P_F_A')
+% legend('P_D','P_F_A')
 
 subplot(4,1,3)
 grid minor; hold on
@@ -352,7 +353,7 @@ plot(-var_data(:,13), var_data(:,10),'--')
 plot(-var_data(:,13), var_data(:,6),'-.')
 % title('P_D and P_F_A for different changes in SNR')
 xlabel('Change in SNR (dB) - Shewart')
-legend('P_D','P_F_A')
+% legend('P_D','P_F_A')
 
 subplot(4,1,4)
 grid minor; hold on
@@ -360,34 +361,34 @@ plot(-var_data(:,13), var_data(:,11),'--')
 plot(-var_data(:,13), var_data(:,7),'-.')
 % title('P_D and P_F_A for different changes in SNR')
 xlabel('Change in SNR (dB) - SR Gauss')
-legend('P_D','P_F_A')
+% legend('P_D','P_F_A')
 
 
 f = @(b,x) b(1).*exp(b(2).*x) + b(3);
-nrmrsd = @(b) norm( var_data(:,1) - f(b,-var_data(:,13)))                          % Residual Norm Cost Function
+nrmrsd = @(b) norm( var_data(:,1) - f(b,-var_data(:,13))) ;                         % Residual Norm Cost Function
 B0 = rand(3,1);                                                     % Choose Appropriate Initial Estimates
 [B,rnrm] = fminsearch(nrmrsd, B0);    
-f1 = f(B,-var_data(:,13))
-nrmrsd = @(b) norm( var_data(:,2) - f(b,-var_data(:,13)))                          % Residual Norm Cost Function
+f1 = f(B,-var_data(:,13));
+nrmrsd = @(b) norm( var_data(:,2) - f(b,-var_data(:,13)));                          % Residual Norm Cost Function
 B0 = rand(3,1);                                                     % Choose Appropriate Initial Estimates
 [B,rnrm] = fminsearch(nrmrsd, B0);    
-f2 = f(B,-var_data(:,13))
-nrmrsd = @(b) norm( var_data(:,3) - f(b,-var_data(:,13)))                          % Residual Norm Cost Function
+f2 = f(B,-var_data(:,13));
+nrmrsd = @(b) norm( var_data(:,3) - f(b,-var_data(:,13)));                          % Residual Norm Cost Function
 B0 = rand(3,1);                                                     % Choose Appropriate Initial Estimates
 [B,rnrm] = fminsearch(nrmrsd, B0);    
-f3 = f(B,-var_data(:,13))
-nrmrsd = @(b) norm( var_data(:,4) - f(b,-var_data(:,13)))                          % Residual Norm Cost Function
+f3 = f(B,-var_data(:,13));
+nrmrsd = @(b) norm( var_data(:,4) - f(b,-var_data(:,13)));                          % Residual Norm Cost Function
 B0 = rand(3,1);                                                     % Choose Appropriate Initial Estimates
 [B,rnrm] = fminsearch(nrmrsd, B0);    
-f4 = f(B,-var_data(:,13))
+f4 = f(B,-var_data(:,13));
 
 figure (90);clf;
 grid minor; hold on;
-h1=plot(-var_data(:,13),f1,'b-.',-var_data(:,13),var_data(:,1),'b.')
-h2=plot(-var_data(:,13),f2,'r-.',-var_data(:,13),var_data(:,2),'r.')
-h3=plot(-var_data(:,13),f3,'m-.',-var_data(:,13),var_data(:,3),'m.')
-h4=plot(-var_data(:,13),f4,'g-.',-var_data(:,13),var_data(:,4),'g.')
-legend([h1(2) h2(2) h3(2) h4(2)],'CUSUM','Shewart','SR Gauss','Modified CUSUM')
+h1=plot(-var_data(:,13),f1,'b-.',-var_data(:,13),var_data(:,1),'b.');
+h2=plot(-var_data(:,13),f2,'r-.',-var_data(:,13),var_data(:,2),'r.');
+h3=plot(-var_data(:,13),f3,'m-.',-var_data(:,13),var_data(:,3),'m.');
+h4=plot(-var_data(:,13),f4,'g-.',-var_data(:,13),var_data(:,4),'g.');
+legend([h1(2) h2(2) h3(2) h4(2)],'CUSUM','Shewart','SR Gauss','SMAGLR')
 xlabel('Change in SNR (dB)')
 ylabel('Average number of steps before detection')
 %% more data processing - find above stats per delta SNR
@@ -487,8 +488,8 @@ grid minor; hold on
 plot(var_data(:,13), var_data(:,12),'--')
 plot(var_data(:,13), var_data(:,8),'-.')
 title('Pd and Pfa for different changes in mean')
-xlabel('Change in mean - Modified CUSUM')
-legend('P_D','P_F_A')
+xlabel('Change in mean - SMAGLR')
+% legend('P_D','P_F_A')
 
 subplot(4,1,2)
 grid minor; hold on
@@ -496,7 +497,7 @@ plot(var_data(:,13), var_data(:,9),'--')
 plot(var_data(:,13), var_data(:,5),'-.')
 % title('Pd and Pfa for different changes in mean')
 xlabel('Change in mean -  CUSUM')
-legend('P_D','P_F_A')
+% legend('P_D','P_F_A')
 
 subplot(4,1,3)
 grid minor; hold on
@@ -504,7 +505,7 @@ plot(var_data(:,13), var_data(:,10),'--')
 plot(var_data(:,13), var_data(:,6),'-.')
 % title('Pd and Pfa for different changes in mean')
 xlabel('Change in mean - Shewart')
-legend('P_D','P_F_A')
+% legend('P_D','P_F_A')
 
 subplot(4,1,4)
 grid minor; hold on
@@ -512,34 +513,34 @@ plot(var_data(:,13), var_data(:,11),'--')
 plot(var_data(:,13), var_data(:,7),'-.')
 % title('Pd and Pfa for different changes in mean')
 xlabel('Change in mean - SR Gauss')
-legend('P_D','P_F_A')
+% legend('P_D','P_F_A')
 
 
 f = @(b,x) b(1).*exp(b(2).*x) + b(3);
-nrmrsd = @(b) norm( var_data(:,1) - f(b,-var_data(:,13)))                          % Residual Norm Cost Function
+nrmrsd = @(b) norm( var_data(:,1) - f(b,-var_data(:,13)));                          % Residual Norm Cost Function
 B0 = rand(3,1);                                                     % Choose Appropriate Initial Estimates
 [B,rnrm] = fminsearch(nrmrsd, B0);    
-f1 = f(B,-var_data(:,13))
-nrmrsd = @(b) norm( var_data(:,2) - f(b,-var_data(:,13)))                          % Residual Norm Cost Function
+f1 = f(B,-var_data(:,13));
+nrmrsd = @(b) norm( var_data(:,2) - f(b,-var_data(:,13)));                          % Residual Norm Cost Function
 B0 = rand(3,1);                                                     % Choose Appropriate Initial Estimates
 [B,rnrm] = fminsearch(nrmrsd, B0);    
-f2 = f(B,-var_data(:,13))
-nrmrsd = @(b) norm( var_data(:,3) - f(b,-var_data(:,13)))                          % Residual Norm Cost Function
+f2 = f(B,-var_data(:,13));
+nrmrsd = @(b) norm( var_data(:,3) - f(b,-var_data(:,13)));                          % Residual Norm Cost Function
 B0 = rand(3,1);                                                     % Choose Appropriate Initial Estimates
 [B,rnrm] = fminsearch(nrmrsd, B0);    
-f3 = f(B,-var_data(:,13))
-nrmrsd = @(b) norm( var_data(:,4) - f(b,-var_data(:,13)))                          % Residual Norm Cost Function
+f3 = f(B,-var_data(:,13));
+nrmrsd = @(b) norm( var_data(:,4) - f(b,-var_data(:,13)));                          % Residual Norm Cost Function
 B0 = rand(3,1);                                                     % Choose Appropriate Initial Estimates
 [B,rnrm] = fminsearch(nrmrsd, B0);    
-f4 = f(B,-var_data(:,13))
+f4 = f(B,-var_data(:,13));
 
 figure (901);clf;
 grid minor; hold on;
-h5=plot(var_data(:,13),var_data(:,1),'b.')
-h6=plot(var_data(:,13),var_data(:,2),'r.')
-h7=plot(var_data(:,13),var_data(:,3),'m.')
-h8=plot(var_data(:,13),var_data(:,4),'g.')
-legend([h5(1) h6(1) h7(1) h8(1)],'CUSUM','Shewart','SR Gauss','Modified CUSUM')
+h5=plot(var_data(:,13),var_data(:,1),'b.');
+h6=plot(var_data(:,13),var_data(:,2),'r.');
+h7=plot(var_data(:,13),var_data(:,3),'m.');
+h8=plot(var_data(:,13),var_data(:,4),'g.');
+legend([h5(1) h6(1) h7(1) h8(1)],'CUSUM','Shewart','SR Gauss','SMAGLR','Location','southeast')
 xlabel('Change in mean')
 ylabel('Average number of steps before detection')
 ylim([0 50])
